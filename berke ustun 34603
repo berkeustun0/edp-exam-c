@@ -1,0 +1,52 @@
+from queue import Queue
+class Event:
+    def __init__(self, name, payload=None):
+        self.name = name
+        self.payload = payload or {}
+class ApplicationSentEvent(Event):
+    def __init__(self, student_name, university_name):
+        super().__init__('application_sent', {'student_name': student_name, 'university_name': university_name})
+class ApplicationApprovedEvent(Event):
+    def __init__(self, student_name, university_name):
+        super().__init__('application_approved', {'student_name': student_name, 'university_name': university_name})
+class ApplicationRejectedEvent(Event):
+    def __init__(self, student_name, university_name):
+        super().__init__('application_rejected', {'student_name': student_name, 'university_name': university_name})
+class Student:
+    def __init__(self, student_id, name):
+        self.student_id = student_id
+        self.name = name
+    def apply_to_university(self, university, communication_queue):
+        print(f"{self.name} has applied to {university.name}.")
+        event = ApplicationSentEvent(self.name, university.name)
+        communication_queue.put(event)
+class University:
+    def __init__(self, name):
+        self.name = name
+        self.applications = []
+    def process_application(self, event, communication_queue):
+        student_name = event.payload['student_name']
+        print(f"Processing application for {student_name} at {self.name}...")
+        if student_name[0].lower() in 'aeiou': 
+            print(f"Application approved for {student_name}.")
+            communication_queue.put(ApplicationApprovedEvent(student_name, self.name))
+        else:
+            print(f"Application rejected for {student_name}.")
+            communication_queue.put(ApplicationRejectedEvent(student_name, self.name))
+def main():
+    communication_queue = Queue()
+    student1 = Student(1, "Alice")
+    student2 = Student(2, "Bob")
+    university = University("Tech University")
+    student1.apply_to_university(university, communication_queue)
+    student2.apply_to_university(university, communication_queue)
+    while not communication_queue.empty():
+        event = communication_queue.get()
+        if event.name == 'application_sent':
+            university.process_application(event, communication_queue)
+        elif event.name == 'application_approved':
+            print(f"Notification: {event.payload['student_name']} has been approved by {event.payload['university_name']}.")
+        elif event.name == 'application_rejected':
+            print(f"Notification: {event.payload['student_name']} has been rejected by {event.payload['university_name']}.")
+if __name__ == "__main__":
+    main()
